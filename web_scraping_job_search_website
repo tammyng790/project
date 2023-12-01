@@ -1,0 +1,309 @@
+# Program: IST2334 Group Coursework
+# Title: Web Scraping a Job Search Website (JobStreet)
+
+# Description: This program contains 2 parts:
+# - Part 1: Code for web scraping
+# - Part 2: Code for plots (visualisation)
+
+# ******************************************************************************
+# Part 1: Scraping Jobstreet
+# ******************************************************************************
+
+# Loading the rvest and rstudioapi package
+# rvest to scrape data from webpage
+library('rvest')
+library('rstudioapi')
+
+# Define the URL you want to scrape (JobStreet's Analyst search results page)
+# Specifying the url for desired website to be scraped (page 1 and page 2)
+url1 <- 'https://www.jobstreet.com.my/analyst-jobs/in-Malaysia'
+url2 <- 'https://www.jobstreet.com.my/analyst-jobs/in-Malaysia?pg=2'
+
+# Read the HTML content from the URL
+page1 <- read_html(url1)
+page2 <- read_html(url2)
+
+# Extract company names from page 1 and convert data into text
+company_names1 <- page1 %>%
+  # Selecting HTML nodes
+  html_nodes(".y44q7i1 .rqoqz4") %>%
+  # Extracting text content from the selected HTML nodes
+  html_text()
+
+# Do the same for company names on page 2
+company_names2 <- page2 %>%
+  html_nodes(".y44q7i1 .rqoqz4") %>%
+  html_text()
+
+# Extract job locations from page 1 and convert data into text
+job_locations1 <- page1 %>%
+  html_nodes(".y44q7i3 .rqoqz4") %>%
+  html_text()
+
+# Do the same for job locations on page 2
+job_locations2 <- page2 %>%
+  html_nodes(".y44q7i3 .rqoqz4") %>%
+  html_text()
+
+# Extract job specialisations from page 1 and convert data into text
+job_specialisations1 <- page1 %>%
+  html_nodes("._1hbhsw652:nth-child(2) ._1hbhsw6h") %>%
+  html_text()
+
+# Do the same for job specialisations on page 2
+job_specialisations2 <- page2 %>%
+  html_nodes("._1hbhsw652:nth-child(2) ._1hbhsw6h") %>%
+  html_text()
+
+# Extract job types from page 1 and convert data into text
+job_type1 <- page1 %>%
+  html_nodes("._1hbhsw67y~ ._1hbhsw652 ._1hbhsw6h") %>%
+  html_text()
+
+# Do the same for job types on page 2
+job_type2 <- page2 %>%
+  html_nodes("._1hbhsw67y~ ._1hbhsw652 ._1hbhsw6h") %>%
+  html_text()
+
+# Extract job post duration from page 1 and convert data into text
+# (posted x hours ago)
+post_duration1 <- page1 %>%
+  html_nodes("#jobList ._1hbhsw64y .y44q7i22") %>%
+  html_text()
+
+# Do the same for job post duration on page 2
+post_duration2 <- page2 %>%
+  html_nodes("#jobList ._1hbhsw64y .y44q7i22") %>%
+  html_text()
+
+# Use gsub() to remove "h ago" from post duration
+post_duration1<-gsub("h ago","",post_duration1)
+post_duration2<-gsub("h ago","",post_duration2)
+
+# Change post duration variable to numeric type variable
+# (to be used to calculate average in plot)
+post_duration1<-as.numeric(post_duration1)
+post_duration2<-as.numeric(post_duration2)
+
+# Combine extracted data into a data frame
+job_data1 <- data.frame(
+  Company = company_names1,
+  Location = job_locations1,
+  Job_Specialisation = job_specialisations1,
+  Job_Type = job_type1,
+  Post_Duration_Hours_Ago = post_duration1
+  )
+
+job_data2 <- data.frame(
+  Company = company_names2,
+  Location = job_locations2,
+  Job_Specialisation = job_specialisations2,
+  Job_Type = job_type2,
+  Post_Duration_Hours_Ago = post_duration2
+  )
+
+# Combine data frames into 1 data frame
+job_data <- rbind(job_data1, job_data2)
+
+# View the extracted data
+print(job_data)
+
+# Save the data
+# Remove row names from .csv file using row.names = FALSE
+# Save file onto current folder that R file is saved in
+current_path = rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+
+write.csv(job_data, "Jobstreet_Analyst_Job_Search_Malaysia.csv",
+row.names = FALSE)
+
+
+# ******************************************************************************
+# Part 2: Plotting Graphs
+# ******************************************************************************
+# Note: Run the code below if have not been run previously
+current_path = rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+
+# View directory path
+print(getwd())
+
+# Read .csv file into data frame
+job_data <- read.csv("Jobstreet_Analyst_Job_Search_Malaysia.csv")
+
+# Load necessary packages for plots
+library(dplyr) # used for pipe operator function
+library(ggplot2)
+
+# ------------------------------------------------------------------------------
+# 1) Identifying job specialisations required by analysts
+# ------------------------------------------------------------------------------
+# Save the bar chart as a PDF
+pdf(file = 'Bar_Chart_Analyst_Job_Specialisations.pdf', width = 20, height = 20)
+
+# Plotting a bar chart for job specialisations count using ggplot2
+# Define the aesthetics and data source
+ggplot(job_data, aes(x = Job_Specialisation)) +
+  # Add bars to the plot with specified fill color
+  geom_bar(fill = "lightslateblue") +
+  # Set plot title and axis labels
+  labs(title = "Distribution of Analyst Job Specialisations",
+    y = "Count",
+    x = "Job Specialisation") +
+# Apply a minimalistic theme to the plot by removing grid lines
+theme_minimal() +
+theme(
+  # Adjust x-axis text alignment and size
+  axis.text.x = element_text(hjust = 1, size=20),
+  # Adjust y-axis text alignment and size
+  axis.text.y = element_text(hjust = 1, size=20),
+  # Adjust y-axis text alignment and size
+  plot.title = element_text(size = 30, face = "bold", hjust = 0.3),
+  # Customize axis titles appearance
+  axis.title = element_text(size = 25, face = "bold")
+) +
+# Flip the coordinates for horizontal bars
+coord_flip()
+
+dev.off() # Turn off the PDF device, saving the plot as a PDF file
+
+# ------------------------------------------------------------------------------
+# 2) Categorising different job types offered (contract,full-time,internship)
+# ------------------------------------------------------------------------------
+# Calculate counts and percentages for each Job_Type
+# Take the job_data dataset
+job_type_percent <- job_data %>%
+  # Group the data by Job_Type
+  group_by(Job_Type) %>%
+  # Count occurrences of each Job_Type
+  summarise(count = n()) %>%
+  # Calculate the percentage for each Job_Type
+  mutate(percentage = count / sum(count) * 100)
+
+# Create a pdf file for job types
+pdf(file = 'Pie_Chart_Analyst_Job_Types.pdf', width = 10, height = 10)
+
+# Plot ggplot for job types visualisation (pie chart)
+# Define aesthetics for the plot
+ggplot(job_type_percent, aes(x = "", y = count, fill = Job_Type)) +
+  # Create bars for the pie chart
+  geom_bar(width = 1, stat = "identity", color = "white") +
+  # Convert the bar plot into a pie chart
+  coord_polar(theta = "y") +
+  # Set plot and legend titles
+  labs(title = "Distribution of Analyst Job Types", fill = "Job Type") +
+  # Define custom fill colors
+  scale_fill_manual(values = c("grey", "lightpink1", "lightslateblue")) +
+  # Apply a minimal theme to the plot
+  theme_minimal() +
+  theme(
+  # Remove x-axis title
+  axis.title.x = element_blank(),
+  # Remove y-axis title
+  axis.title.y = element_blank(),
+  # Adjust size and alignment of the plot title
+  plot.title = element_text(size = 20, face = "bold", hjust = 0.6)
+) +
+geom_text(
+  # Display count and percentage in the pie chart
+  aes(label = paste("Count:", count, "\n", round(percentage), "%")),
+  # Adjust the position and size of the text
+  position = position_stack(vjust = 0.5), size = 2.5
+) +
+# Add a legend title
+guides(fill = guide_legend(title = "Job Type"))
+
+dev.off() # Turn off the PDF device, saving the plot as a PDF file
+
+# ------------------------------------------------------------------------------
+# 3) Identifying the number of jobs per location
+# ------------------------------------------------------------------------------
+# Identifying the number of jobs per location
+location_count <- table(job_data$Location)
+
+# Convert the counts to a data frame
+location_count_df <- data.frame(Location = names(location_count),
+  Job_Count = as.numeric(location_count))
+
+pdf(file = 'Bar_Chart_Num_of_Analyst_Jobs_Per_Location.pdf', width = 20, height =
+20)
+
+# Create a bar plot using ggplot2
+ggplot(location_count_df, aes(x = reorder(Location, Job_Count),
+  y = Job_Count)) +
+# Create bar plot with specified fill color
+geom_bar(stat = "identity", fill = "lightslateblue") +
+# Add plot labels
+labs(title = "Number of Analyst Jobs per Location",
+  x = "Location",
+  y = "Number of Jobs") +
+# Sets a minimalistic view for plot by removing grid lines
+theme_minimal()+
+theme(
+  plot.title = element_text(size = 50, face = "bold"),
+  axis.title = element_text(size = 40, face = "bold"),
+  axis.text = element_text(size = 30)
+) +
+# Flip the coordinates for a horizontal bar plot
+coord_flip()
+dev.off() # Turn off the PDF device, saving the plot as a PDF file
+
+# ------------------------------------------------------------------------------
+# 4) Identifying most active companies by posting duration
+# ------------------------------------------------------------------------------
+# Calculate the average post duration for each company
+average_duration <- aggregate(Post_Duration_Hours_Ago ~ Company,
+  data = job_data,
+  FUN = mean)
+
+# Save the bar chart as a PDF file with specific dimensions
+pdf(file = 'Bar_Chart_Average_Posting_Duration.pdf', width = 20, height = 20)
+
+# Create a bar plot for the average post duration using ggplot2
+ggplot(average_duration, aes(x = Company, y = Post_Duration_Hours_Ago)) +
+  geom_bar(stat = "identity", fill = "lightslateblue",width = 0.7) +
+# Set plot title and axis labels
+labs(title = "Average Post Duration Across Companies",
+  y = "Average Post Duration (Hours ago)",
+  x = "Company") +
+# Sets a minimalistic view for plot by removing grid lines
+theme_minimal() +
+# Adjust x-axis text alignment and size
+theme(axis.text.x = element_text(hjust = 1, size = 30),
+  #Adjust title size
+  plot.title = element_text(size = 40, face="bold"),
+  # Adjust x-axis title size
+  axis.title.x = element_text(size = 35, face="bold"),
+  # Adjust y-axis title size
+  axis.title.y = element_text(size = 35, face="bold")) +
+# Flip the coordinates for horizontal bars
+coord_flip()
+
+dev.off() # Turn off the PDF device, saving the plot as a PDF file
+
+# ------------------------------------------------------------------------------
+# 5) Identifying top companies that hire analysts
+# ------------------------------------------------------------------------------
+# Save the bar chart as a PDF
+pdf(file = 'Bar_Chart_Companies_Hiring_Analysts.pdf', width = 20, height = 20)
+
+# Plotting a bar chart for companies hiring analysts
+ggplot(job_data, aes(x = Company)) +
+  geom_bar(fill = "lightslateblue",width=0.7) +
+  labs(title = "Companies Hiring Analysts",
+  y = "Count",
+  x = "Company") +
+# Sets a minimalistic view for plot by removing grid lines
+theme_minimal() +
+  # Adjust x-axis text alignment and size
+  theme(axis.text.x = element_text(hjust = 1, size = 30),
+  # Adjust title size
+  plot.title = element_text(hjust = 0.2, size = 50, face="bold"),
+  # Adjust x-axis title size
+  axis.title.x = element_text(size = 35, face="bold"),
+  # Adjust y-axis title size
+  axis.title.y = element_text(size = 35, face="bold")) +
+# Flip the coordinates for horizontal bars
+coord_flip()
+
+dev.off() # Turn off the PDF device, saving the plot as a PDF file
